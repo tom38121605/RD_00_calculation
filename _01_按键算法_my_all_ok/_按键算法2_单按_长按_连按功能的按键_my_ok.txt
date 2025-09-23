@@ -1,0 +1,428 @@
+
+
+长按： 只能在按键弹起时判断
+连按： 只能在按键按下的时候判断， 第1次按下时为增加灵敏度，不需要计时。后面的要计算多少时间后才算一次
+短按： 可在按下的时候判断，也可在弹起的时候判断，都可
+
+
+========================= 按键单按（短按）示例 （简化版  -- 无模块） ===ok===================
+
+
+       //scan key1
+      if( (!P04) && (flg_keydown1==0) )   
+      {
+          DETECT_10MS; 
+
+          if(!P04) 
+          {
+             flg_keydown1=1;  
+             flg_keyvalue1=1;
+          }         
+      } 
+      else if(P04)
+      {
+          DETECT_10MS; 
+
+          if(P04) 
+             flg_keydown1=0;     
+      }  
+      
+      if(flg_keyvalue1)   
+      {
+          flg_keyvalue1=0;
+          P12 = ~P12; 
+      }      
+
+
+========================= 按键单按（短按）示例 ===ok===================
+
+//单按（短按）
+void key_scan (void) 
+{
+   
+   //scan key1
+   if( (!KEY1) && (flg_Keydown1==0) )  //SW1
+   {
+       Timer0_Delay1ms(10); 
+
+       if(!KEY1) 
+       {
+          flg_Keydown1=1;  
+          flg_Keyvalue1=1;
+       }         
+   } 
+   else if(KEY1)
+   {
+       Timer0_Delay1ms(10); 
+
+       if(KEY1) 
+          flg_Keydown1=0;     
+   }  
+
+}
+
+//单按
+void key_check1 (void)   //按键按下时动作
+{
+   
+   if(flg_Keyvalue1)   
+   //if(flg_Keyvalue1 && (flg_Keydown1==0) )   
+   {
+       flg_Keyvalue1=0;
+       printf("\n SW1 down \r\n"); 
+   }
+
+}
+
+//单按
+void key_check2 (void)   //按键弹起时动作   （待验证）
+{
+
+   if(flg_Keyvalue1 && (flg_Keydown1==0) )   
+   {
+       flg_Keyvalue1=0;
+       printf("\n SW1 come in \r\n"); 
+   }
+
+}
+
+
+
+
+========================= 按键 连按示例 ===ok====简单版===============
+
+
+//连按功能的按键 （调音量，调亮度）
+void key_scan2 (void) 
+{
+      
+   //scan SW2 ,  light-
+   if (!KEY2)  
+   {
+       Timer0_Delay1ms(10); 
+
+       if(!KEY2) 
+       {
+          
+          if(flg_Keydown2 ==0)
+             keytouch2 =1;       //keytouch2是增加灵敏度用的，就是按键第一次按下，要马上动作，不需计数（后面的是计数多少次算按下一次）
+          else 
+             keytouch2 =0;          
+             
+          flg_Keydown2=1;
+          
+          flg_Keyvalue2++;
+       }         
+   } 
+   else if(KEY2)
+   {
+       Timer0_Delay1ms(10); 
+
+       if(KEY2) 
+       {
+          flg_Keydown2=0;  
+          flg_Keyvalue2=0;            
+       }          
+   }              
+      
+}
+
+
+//连按功能的按键 （调音量，调亮度）
+void key_check2 (void) 
+{
+   
+   //check SW2 ,  light-
+   if( (keytouch2 == 1 ) || (flg_Keyvalue2 >=KEYSCANCOUNT) ) 
+   {
+      flg_Keyvalue2=0;
+      keytouch2 = 0;
+      
+       printf("\n SW2 down \r\n"); 
+   }
+ 
+ 
+}
+
+
+
+========================= 按键 连按示例 ===ok====第一次防抖优化版（待验证）===============
+
+
+//连按功能的按键 （调音量，调亮度）
+void key_scan2 (void) 
+{
+      
+   //scan SW2 ,  light-
+   if (!KEY2)  
+   {
+       Timer0_Delay1ms(10); 
+
+       if(!KEY2) 
+       {
+          
+          if(flg_Keydown2 ==0)
+             keytouch2 =1;       //keytouch2是增加灵敏度用的，就是按键第一次按下计数比后面少（后面的是计数多少次算按下一次）
+          else 
+             keytouch2 =0;          
+             
+          flg_Keydown2=1;
+          
+       }         
+   } 
+   else if(KEY2)
+   {
+       Timer0_Delay1ms(10); 
+
+       if(KEY2) 
+       {
+          flg_Keydown2=0;  
+          //ikeynum2=0;         
+          //ikeytouch1 = 0;   
+       }          
+   }              
+      
+}
+
+
+#define VOLKEYCOUNT1 3
+#define VOLKEYCOUNT2 20 
+void key_check2 (void) 
+{
+   
+   //key2
+   if (flg_keydown2) 
+   {
+      ikeynum2++;
+   }         
+   else
+   {      
+      ikeynum2 =0;
+      ikeytouch2=0;
+   } 
+
+   //key2 vol+
+   if( ( (ikeytouch2 == 1 ) && (ikeynum2 >=VOLKEYCOUNT1) ) || (ikeynum2 >=VOLKEYCOUNT2) ) 
+   {
+      ikeynum2 = 0;
+      ikeytouch2 = 0;
+      ikeyvalue2=1;
+   } 
+ 
+}
+
+void key_process(void)
+{   
+   //key2  vol+
+   if( ikeyvalue2==1)
+   {
+      ikeyvalue2=0;
+    
+      iputbytes0(svoladd,5); 
+      Switch_Delay1ms(10);   
+   }   
+
+}
+
+
+=================== 按键单按（短按+长按）示例 ===（来自七路调光示例 ）=======k============
+
+void Key_Scan(void)
+{    
+   
+   //KEY1
+   if(KEY1==0) 
+   {
+      delay_ms(10);  //去抖动 
+      if(KEY1==0) 
+          flg_KeyState1=1;   //按键按下
+   }
+   else if(KEY1==1)
+      flg_KeyState1=0;        //按键弹起    
+
+}
+
+void Key_check(void)
+{    
+      //key1
+      if (flg_KeyState1) 
+         iKeyNum1++;         
+      else
+      {
+         if (iKeyNum1<1) 
+             iKeyValue1 =0;
+         else if (iKeyNum1<10)
+             {iKeyValue1 =1; iKeyDown1=1;}   //短按
+         else          
+             {iKeyValue1 =2; iKeyDown1=1;}   //长按
+      }
+}
+
+//Do With Key 
+if  (iKeyDown1==1 )
+{
+    iKeyDown1=0;
+
+    if (iKeyValue1 ==1)   //短按
+    {
+       P01=~P01;
+       iKeyNum1=0; iKeyValue1=0;
+    }
+
+    if (iKeyValue1 ==2)   //长按
+    {
+       P02=~P02;
+       iKeyNum1=0; iKeyValue1=0;
+    }
+    
+}
+
+
+
+
+
+=============================修改后的 （短按+长按）示例=====长按在弹起时才动作==(反应慢)======ok==========================
+
+
+void Key_Scan(void)
+{    
+   
+   //KEY1
+   if(KEY1==0) 
+   {
+      delay_ms(10);  //去抖动 
+      if(KEY1==0) 
+          iKeyDown1=1;   //按键按下
+   }
+   else if(KEY1==1)
+      iKeyDown1=0;        //按键弹起    
+
+}
+
+void Key_check(void)
+{    
+      //key1
+      if (iKeyDown1) 
+         iKeyNum1++;         
+      else
+      {
+         if (iKeyNum1<1) 
+             iKeyValue1 =0;
+         else if (iKeyNum1<10)
+             {iKeyValue1 =1; iKeyCome1=1;}   //短按
+         else          
+             {iKeyValue1 =2; iKeyCome1=1;}   //长按
+      }
+}
+
+//Do With Key 
+if  (iKeyCome1==1 )
+{
+    iKeyCome1=0;
+
+    if (iKeyValue1 ==1)   //短按
+    {
+       P01=~P01;
+       iKeyNum1=0; iKeyValue1=0;
+    }
+
+    if (iKeyValue1 ==2)   //长按
+    {
+       P02=~P02;
+       iKeyNum1=0; iKeyValue1=0;
+    }
+    
+}
+
+=============================修改后的 （短按+长按）示例=====长按在按下去时就动作==(反应快)======ok==========================
+
+
+void key_scan(void)
+{    
+   
+   //KEY1
+   if(KEY1==0) 
+   {
+      //if ( ikeydown1==0)              //可节约时间
+      delay_ms(10);  //去抖动 
+
+      if(KEY1==0) 
+          ikeydown1=1;   //按键按下
+   }
+   else if(KEY1==1)
+   {
+      if ( ikeydown1==1)                      //节约时间
+         delay_ms(10);  //去抖动 
+
+      ikeydown1=0;        //按键弹起    
+   }
+
+}
+
+
+void key_check(void)
+{
+   static UINT8 flg_downlongkey1=0;
+   
+   if (flg_downlongkey1==0) 
+   {
+   
+      //key1
+      if (flg_keydown1) 
+      {
+         ikeynum1++;   
+         
+         if(ikeynum1>=10)
+            {ikeyvalue1 =2; flg_keycome1=1; flg_downlongkey1=1;} 
+
+      }         
+      else
+      {
+         
+         if (ikeynum1<1) 
+             ikeyvalue1 =0;
+         else if (ikeynum1<10)
+             {ikeyvalue1 =1; flg_keycome1=1;}    
+         else          
+             {ikeyvalue1 =2; flg_keycome1=1;}  
+             
+      } 
+      
+   }
+   else
+   {
+
+      if (flg_keydown1==0) 
+      {                 
+         flg_downlongkey1=0; 
+         ikeynum1=0; ikeyvalue1=0;    
+      }       
+      
+   }   
+         
+}
+
+//Do With Key 
+if  (ikeycome1==1 )
+{
+    ikeycome1=0;
+
+    if (ikeyvalue1 ==1)   //短按
+    {
+       P01=~P01;
+       ikeynum1=0; ikeyvalue1=0;
+    }
+
+    if (ikeyvalue1 ==2)   //长按
+    {
+       P02=~P02;
+       ikeynum1=0; ikeyvalue1=0;
+    }
+    
+}
+
+
+
+
+
+

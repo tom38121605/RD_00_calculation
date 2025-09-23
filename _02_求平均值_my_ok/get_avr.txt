@@ -1,0 +1,129 @@
+ 
+
+#define AVERAGENUM    16 
+#define BITMOVE16     4 
+UINT16 get16_avr( UINT16 inew)
+{
+   static UINT8 icount =0;								
+   static UINT32 isum=0;		
+	
+   static UINT16 iavr=0;	
+   static UINT16 iold[AVERAGENUM] ={0};   
+
+   
+   if (icount<=AVERAGENUM)
+      icount++;
+   else
+      icount=AVERAGENUM+1;
+
+
+   if (icount<=AVERAGENUM)
+   {								
+      iavr=inew;
+      isum = isum + inew;
+      
+      iold[icount-1] = inew;
+   }
+   else
+   {								
+      isum = isum + inew - iold[0];
+      
+      //iavr=(UINT16)(isum/AVERAGENUM);	  
+      iavr=(isum>>BITMOVE16);	
+
+      memcpy( &iold[0], &iold[1], (AVERAGENUM-1)*sizeof(UINT16));
+
+      iold[(AVERAGENUM-1)] = inew;			
+   }	
+
+   return iavr;	
+}
+
+
+==================================
+#define AVERAGENUM  10 
+
+#define   AVRDATATYPE    int16     //以后考虑用常数来优化下面的函数
+#define   AVRDATATYPE2   int32    //以后考虑用常数来优化下面的函数
+
+int16 get_avr( int16 inew)
+{
+   static uint8 icount =0;								
+   static int32 isum=0;		
+	
+   static int16 iavr=0;	
+   static  int16 iold[AVERAGENUM] ={0};   
+
+   
+   if (icount<=AVERAGENUM)
+      icount++;
+   else
+      icount=AVERAGENUM+1;
+
+
+   if (icount<=AVERAGENUM)
+   {								
+      iavr=inew;
+      isum = isum + inew;
+      
+      iold[icount-1] = inew;
+   }
+   else
+   {								
+      isum = isum + inew - iold[0];
+      iavr=(int16)(isum/AVERAGENUM);        
+
+      memcpy(&iold[0],&iold[1],(AVERAGENUM-1)*sizeof(int16));
+
+      iold[(AVERAGENUM-1)] = inew;			
+   }	
+
+   return iavr;	
+}
+
+
+=================gs331示例========== ok=======================
+
+
+#define AVERAGENUM    8 
+#define BITMOVE16     3 
+
+UINT16 get16_avr( UINT16 inew)
+{
+   static UINT8 icount =0;								
+   static UINT32 isum=0;		
+	
+   static UINT16 iavr=0;	
+   static UINT16 iold[AVERAGENUM] ={0};   
+
+   
+   if (icount<=AVERAGENUM)
+      icount++;
+   else
+      icount=AVERAGENUM+1;
+
+
+   if (icount<=AVERAGENUM)
+   {								
+      iavr=inew;
+      isum = isum + inew;
+      
+      iold[icount-1] = inew;
+   }
+   else
+   {								
+      isum = isum + inew - iold[0];
+      
+      //iavr=(UINT16)(isum/AVERAGENUM);	  
+      iavr=(isum>>BITMOVE16);	
+
+      memcpy(&iold[0],&iold[1],(AVERAGENUM-1)*sizeof(UINT16));
+
+      iold[(AVERAGENUM-1)] = inew;			
+   }	
+
+   return iavr;	
+}      
+
+
+          

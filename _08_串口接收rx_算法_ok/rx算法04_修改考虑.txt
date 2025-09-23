@@ -1,0 +1,49 @@
+
+下面3点都已修改  -- 参考
+
+说明1： 原来的SOFTUART_RX_END1没有发挥作用
+说明2： 收到首字节后，如果很长时间都没有收到END1, 则应把当前数据包作废 （如收到首字节后100个字节都没有收到END1）
+说明3： if中有多个判断时，用括号（）限制优先级
+说明4：添加return， 使程序更加严谨
+
+
+
+
+         //开始接收指令后面的数据
+         if(f_Start1=='t')  
+         {
+            iRecData[iRecNum]=iRec;
+            iRecNum++;
+            
+            if( (iRecNum>100) &&  (f_End1=='f')  )
+            {
+               SoftUart_RXInit(); return ;               
+            }
+
+                
+            if ( (iRec==SOFTUART_RX_END1) &&  （f_End1=='f'）)
+            {
+               f_End1='t';
+               return ;
+            }
+
+            if(f_End1=='t')
+            {
+               if (iRec==SOFTUART_RX_END2)
+               {
+                  iRecNum2=iRecNum;
+                  memcpy(iRecData2,iRecData,iRecNum);
+                  flg_Reced=1;
+            
+                  SoftUart_RXInit(); return；
+               }  
+            }
+            else
+            {
+               SoftUart_RXInit(); return；               
+             }          
+
+         }
+
+
+

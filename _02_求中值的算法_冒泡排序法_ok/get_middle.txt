@@ -1,0 +1,50 @@
+
+#define AVERAGENUM    8 
+#define BITMOVE     3 
+
+void sort(UINT16 a[],int n) 
+{ 
+  int i,j,tmp;
+
+   for(i = 0;i < n-1;i++) 
+   {
+      for(j = 0;j < n-i-1;j++) 
+      {
+         if(a[j] > a[j+1]) 
+         {
+            tmp = a[j];
+            a[j] = a[j+1];
+            a[j+1] = tmp; 
+          }
+      }
+   }
+}
+
+UINT16 calc_median(UINT16 a[],int n) 
+{
+   static UINT16 dd[AVERAGENUM] ={0};
+   
+   memcpy(&dd[0],&a[0],(AVERAGENUM)*sizeof(UINT16));
+   
+   sort(&dd[0], AVERAGENUM);
+   
+   return dd[AVERAGENUM/2];
+}
+
+UINT16 get16_median1( UINT16 inew)
+{
+   //int temp;
+   //int i, j;
+   //static UINT8 icount =0;                        
+   //static UINT32 isum=0;
+   //static UINT16 iavr=0;  
+   
+   static UINT16 iold[AVERAGENUM] ={0};   
+
+   memcpy(&iold[0],&iold[1],(AVERAGENUM-1)*sizeof(UINT16));
+   iold[(AVERAGENUM-1)] = inew;
+
+   return calc_median(&iold[0], AVERAGENUM);
+} 
+
+

@@ -1,0 +1,185 @@
+
+
+最简单的按键：
+
+示例1(有连按)： 待验证   
+
+       if (!P04)    
+       {
+          Timer0_Delay1ms(10);
+          
+          if( !P04  )           
+             P01 = ~P01;
+    
+       }   
+
+
+示例1(无连按)： 待验证   
+
+       if( (!P04) & (flg_keydown==0)  )     
+       {
+          Timer0_Delay1ms(10);
+          
+          if( !P04  )  
+          {           
+             flg_keydown=1;             
+             //P01 = ~P01;
+             P16 = ~P16;
+          }
+       } 
+       else
+          flg_keydown=0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=======================参考===================================
+
+
+
+几种按键扫描软件处理方法
+2017年03月19日 15:49:26 裸奔的大虾 阅读数：461 标签： 工程师 工作  更多
+个人分类： 工作感悟
+按键扫描是每个工程师都会用到的，它就像一个零部件，存在于每个程式系统中。而如何把它写得高效、省空间也是需要一定的技巧。
+
+下面我介绍一下我接触到的一些按键扫描的写法。其实也都是站在巨人的肩膀上，再加上自己的理解稍微改动的，如果有什么错误，请大家指出讨论，一起进步。
+
+在读书时很多人都是采用delay()的方式，我一开始也是，就这么用到毕业难过，所以做出来的东西经常出问题
+
+if（!pin_Key1_IO）   // 建议修改为 if（!pin_Key1_IO） && key_up 
+
+{
+
+delay_MS(10); // 在這裡CPU停了10ms，
+
+if(!pin_Key1_IO)
+
+{
+
+gu8v_Key_Value = 0x01;
+
+}
+
+}
+
+這種方式無疑是最好理解的，但很低效並且有一定幾率出去Bug，
+
+而在工作時，慢慢地回去動腦去想如何改善，參考網上的很多做法，就有了如下的方法
+
+    if(!gbv_Key1_Mode) 
+   { // 按键按下
+if(!pin_Key1_IO) // 按键消抖
+{
+gu16v_Key1_Count++;
+}
+else
+{
+gu16v_Key1_Count = 0;
+} 
+   if(gu16v_Key1_Count > mac_KeyDebounce)
+   { // 按键确认按下 
+       gu16v_Key1_Count  = 0;
+   gbv_Key1_Mode  = 1;
+   gu8v_KeyDown_Value = 0x01;
+   }
+}
+else if(gbv_Key1_Mode)
+{ // 按键弹起
+if(pin_Key1_IO) // 按键消抖
+{
+gu16v_Key1_Count++;
+}
+else
+{
+gu16v_Key1_Count = 0;
+} 
+   if(gu16v_Key1_Count > mac_KeyDebounce)
+   { // 按键确认弹起 
+   gu16v_Key1_Count = 0;
+   gbv_Key1_Mode  = 0;
+   gu8v_KeyUp_Value = 0x01;
+   }
+}
+
+这种方式解决了效率的问题，不过比较繁琐，不好理解，所以可以用状态机的方式来
+
+switch(gu8v_Key1_Status)
+{
+case 0: // 空闲状态
+if(!pin_Key1_IO) 
+gu8v_Key1_Status = 1; 
+
+break;
+case 1: // 按键触发
+gu16v_Key1_Count++;
+if(gu16v_Key1_Count > mac_KeyDebounce)
+   { // 按键确认弹起 
+   gu16v_Key1_Count = 0;
+   gu8v_KeyDown_Value = 0x01;
+   gu8v_Key1_Status = 2; 
+   }
+if(pin_Key1_IO) gu8v_Key1_Status = mac_Key1_End;
+
+break;
+case 2: // 按键释放
+if(pin_Key1_IO) 
+gu8v_Key1_Status = 3; 
+break;
+case 3:
+gu16v_Key1_Count++;
+if(gu16v_Key1_Count > mac_KeyDebounce)
+   { // 按键确认弹起 
+   gu16v_Key1_Count = 0;
+   gu8v_KeyUp_Value = 0x01;
+   gu8v_Key1_Status = 0; 
+   }
+if(!pin_Key1_IO) gu8v_Key1_Status = mac_Key1_End;
+break;
+case mac_Key1_End: // The end of Key 
+gu8v_Key1_Status = 0;
+gu16v_Key1_Count = 0;
+break;
+default : break;
+}
+
+但是这种写法有太占空间了，之前看了一种新型按键掃描写法，然后就get了，不错不错
+
+        if(gu8v_KeyCurrent.U8 != gu8v_KeyOld)   
+{
+gu8v_KeyNoChangedTime = 0;        
+gu8v_KeyOld = gu8v_KeyCurrent.U8;         
+return;   
+}
+else
+{ 
+gu8v_KeyNoChangedTime++; // key count   
+if(gu8v_KeyNoChangedTime >= LUCC_KEY_DEBOUNCE) 
+{
+gu8v_KeyNoChangedTime = LUCC_KEY_DEBOUNCE; // 维持进入,避免溢出
+gu8v_KeyPress.U8 = gu8v_KeyOld; //        
+        gu8v_KeyDown.U8 = gu8v_KeyPress.U8 & (gu8v_KeyPress.U8 ^ gu8v_KeyLast); 
+gu8v_KeyUp.U8          |= gu8v_KeyLast & (~gu8v_KeyPress.U8);      
+       gu8v_KeyLast =  gu8v_KeyPress.U8;             
+}
+} 
+
+短短幾行就解決了之前所說的問題，目前的單片機程式我都是用這個來操作。 這個我就不解釋了，網上這個的資料有很多，“新型按键掃描”。
+

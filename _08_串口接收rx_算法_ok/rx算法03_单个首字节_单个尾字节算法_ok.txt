@@ -1,0 +1,174 @@
+
+//uart0
+UINT8 flg_rxin1=0;
+ 
+#define RXDATALEN 120
+
+UINT8  irxdata0[RXDATALEN]=0;
+UINT8  itxdata0[RXDATALEN]=0;
+
+#define CMDLEN 50  
+
+#define CMDHEADER1  'G'
+#define CMDHEADER2  'S'
+#define CMDEND1  '\r'
+#define CMDEND2  '\n'
+
+
+UINT8  itxdata02[CMDLEN]={ CMDHEADER1, CMDHEADER2, 'B','A',0,0, 0,0,CMDEND1, CMDEND2 };
+
+UINT8 irxcount = 0;
+UINT8 itxcount = 0;
+
+
+UINT8 flg_cmd=0;
+UINT8 flg_self_rx=0;
+
+
+void main (void) 
+{      
+
+   Set_All_GPIO_Quasi_Mode; 
+
+   Modify_HIRC_Value();   
+  
+   //uart0 init
+   uart0_init(19200);
+   iputs0("start...........................\r\n");  
+  
+     
+   while(1)
+   {        
+
+      //uart0 rx 
+      dowithuart0();   
+      
+   }      
+      
+} 
+
+
+void uart0_init(UINT32 ibaud)
+{ 
+   //AUXR1 |=1<<2;    
+   InitialUART0_Timer1(ibaud);
+   TI = 1;
+
+   set_ES;           //enable UART interrupt
+   set_EA;           
+}
+
+void SerialPort0_ISR(void) interrupt 4 
+{
+   UINT8 cuartbyte=0;
+   
+   if (RI==1) 
+   {         
+      clr_RI;           
+ 
+      cuartbyte = SBUF; 
+      
+      if( (flg_rxin1==0) && (cuartbyte != CMDHEADER1 ) )
+         return;
+      
+      if( (flg_rxin1==0) && (cuartbyte == CMDHEADER1 ) )
+      {
+         flg_rxin1=1;
+         irxdata0[irxcount++] = cuartbyte;
+         return;        
+      }
+      
+      if( (flg_rxin1==1))
+      {
+         
+         if( cuartbyte == CMDEND2)
+         {         
+            itxcount = irxcount;
+                        
+            memcpy(itxdata0, irxdata0, itxcount);
+            flg_cmd=1;  
+
+            flg_rxin1 =0;          
+            irxcount =0; 
+            return;             
+         }   
+         
+         //if( cuartbyte != CMDEND2)
+         else
+         {     
+            if (irxcount<CMDLEN)
+            {                  
+               irxdata0[irxcount++] = cuartbyte;
+               return;  
+            }
+            else 
+            {
+               flg_rxin1 =0;
+               irxcount=0;
+            }   
+            
+         }  
+         
+      }
+    
+   }   
+   
+   if(TI==1)   
+      clr_TI;     
+   
+}
+
+
+
+void dowithuart0(void)
+{
+   UINT16 icmd =0;
+   UINT8 j;      
+   
+   if(flg_cmd==1)
+   {
+      
+      flg_cmd=0;      
+      
+      icmd = itxdata0[4] * 256 + itxdata0[5];
+    
+            
+      if( (itxdata0[0] ==CMDHEADER1 ) && (itxdata0[1] == CMDHEADER2 )  )      
+      {
+         
+         switch(icmd)
+         {
+            
+            case 0x3030:    //TEST
+
+                  break;  
+                  
+            case 0x3031:   //REAL LED
+               
+                  break;  
+            
+            case 0x3032:   //BUTTON
+               
+                  break;  
+            
+            case 0x3033:   //HANDLED           
+               
+                                 
+                  break;  
+                  
+            
+            case 0x3034:   //RANGE
+               
+                  break;  
+            
+            default:
+            
+                  break;  
+
+         } 
+
+      }     
+       
+   }     
+   
+}

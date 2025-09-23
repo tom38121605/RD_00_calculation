@@ -1,0 +1,150 @@
+
+//单按
+void key_scan (void) 
+{
+   
+   //scan SW1,  standby 
+   if( (!KEY1) && (flg_Keydown1==0) )  //SW1
+   {
+       Timer0_Delay1ms(10); 
+
+       if(!KEY1) 
+       {
+          flg_Keydown1=1;  
+          flg_Keyvalue1=1;
+       }         
+   } 
+   else if(KEY1)
+   {
+       Timer0_Delay1ms(10); 
+
+       if(KEY1) 
+          flg_Keydown1=0;     
+   }  
+
+}
+
+
+//连按功能的按键 （调音量，调亮度）
+void key_scan2 (void) 
+{
+      
+   //scan SW2 ,  light-
+   if (!KEY2)  
+   {
+       Timer0_Delay1ms(10); 
+
+       if(!KEY2) 
+       {
+          
+          if(flg_Keydown2 ==0)
+             keytouch2 =1;
+          else 
+             keytouch2 =0;          
+             
+          flg_Keydown2=1;
+          
+          flg_Keyvalue2++;
+       }         
+   } 
+   else if(KEY2)
+   {
+       Timer0_Delay1ms(10); 
+
+       if(KEY2) 
+       {
+          flg_Keydown2=0;  
+          flg_Keyvalue2=0;            
+       }          
+   }              
+   
+
+   //scan SW3 ,  light+
+   if (!KEY3) 
+   {
+       Timer0_Delay1ms(10); 
+
+       if(!KEY3) 
+       {
+          
+          if(flg_Keydown3 ==0)
+             keytouch3 =1;
+          else 
+             keytouch3 =0; 
+          
+          flg_Keydown3=1;  
+          flg_Keyvalue3++;
+       }         
+   } 
+   else if(KEY3)
+   {
+       Timer0_Delay1ms(10); 
+
+       if(KEY3) 
+       {
+          flg_Keydown3=0;   
+          flg_Keyvalue3=0;
+       }          
+   }              
+
+   
+}
+
+//单按
+void key_check (void) 
+{
+   
+   //check SW1,  standby
+   if(flg_Keyvalue1)   
+   //if(flg_Keyvalue1 && (flg_Keydown1==0) )   
+   {
+       flg_Keyvalue1=0;
+       printf("\n SW1 down \r\n"); 
+   }
+
+}
+
+
+//连按功能的按键 （调音量，调亮度）
+void key_check2 (void) 
+{
+   
+   //check SW2 ,  light-
+   if( (keytouch2 == 1 ) || (flg_Keyvalue2 >=KEYSCANCOUNT) ) 
+   {
+      flg_Keyvalue2=0;
+      keytouch2 = 0;
+      
+       //printf("\n SW2 down \r\n"); 
+      
+      if ( ipwmvalue >= PWMSTEP )
+         ipwmvalue -= PWMSTEP;
+      else
+         ipwmvalue = 0;      
+      
+      printf ("ipwm = %d\r\n",ipwmvalue); 
+
+      pwm_init(ipwmvalue);      
+      
+   }
+
+   //check SW3 ,  light+
+   if( (keytouch3 == 1 ) ||  (flg_Keyvalue3>=KEYSCANCOUNT) ) 
+   {
+      flg_Keyvalue3=0; 
+      keytouch3 = 0;
+      
+      //printf("\n SW3 down \r\n"); 
+
+      if ( ipwmvalue <= PWMMAX-PWMSTEP )
+         ipwmvalue += PWMSTEP;
+      else
+         ipwmvalue = PWMMAX;      
+
+      printf ("ipwm = %d\r\n",ipwmvalue);
+
+      pwm_init(ipwmvalue); 
+   }
+ 
+}
+

@@ -1,0 +1,48 @@
+
+机子： snooz
+蓝牙： ATS2815
+参考MCU V1567版本
+
+
+
+tts播放提示音防冲突算法流程：
+
+         ipairtonecount
+         flg_stopsendpair      
+         flg_pairfirst
+         flg_pairing
+         ipairingcount
+
+      1. 当扫描到P02=1 (蓝牙可连接状态)，每隔3.5s发一次pairing提示音指令。
+      1. 用ipairtonecount计算发送pairing提示音指令的时间间隔。
+
+      2. 第一次，flg_pairfirst=0时，不需等3.5s，只需100ms就可发送.
+      2. P02=1后，第一次发送pairing提示音指令后，把flg_pairfirst置1.
+      2. 当P02=0时，把flg_pairfirst置0.
+
+      3. 开机时， flg_stopsendpair =0.
+      3. 当ikeynum3>0, 或flg_switch2aux=1时, 或 flg_poweroffBT=1时； 把flg_stopsendpair置1
+      3. 当ikeynum3=0, flg_switch2aux=0,  flg_poweroffBT=0都等于0时； 把flg_stopsendpair置0
+      3. 当从aux切换到BT时，  把flg_stopsendpair置0
+      3. 当flg_stopsendpair=1时，停止发送pairing提示音指令
+
+      4. 当发送pairing提示音指令后，把flg_pairing置1.
+      4. 当flg_pairing=1时，不能switch2aux()，要一直等待，直到ipairingcount计数4s到flg_pairing=0，才能切换
+      4. 当flg_pairing=1时，不能poweroff_BT()，要一直等待，直到ipairingcount计数4s到flg_pairing=0，才能关机
+      4. flg_pairing 跟flg_stopsendpair没有直接关系，即使flg_stopsendpair=1，也要等到计数满4s，才能设置flg_pairing=0.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

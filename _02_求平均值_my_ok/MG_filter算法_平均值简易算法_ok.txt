@@ -1,0 +1,53 @@
+
+以16个数取平均值为例
+
+   u16 iavr =0;
+   u16 newvalue =0;
+
+
+一. filter 算法：
+
+   1). MG初始算法：  （是filter的算法，跟求平均值的概念不一样）   //有缺陷s16符号问题
+
+        iavr =  ( (inew - iavr) >> 4)  + iavr 
+
+
+   2). 修改后的算法：  （是filter的算法，跟求平均值的概念不一样）  //用 (int16)，修正了上面的缺陷
+
+        iavr =  (  (int16) (inwe - iavr) >> 4 )  + iavr 
+        iavr = iavr + (inew >>4 ) - (iavr>>4)
+
+
+
+二. 求平均值算法：
+
+   1). 本人优化后的算法:   （是求平均值的算法，但一定要把isum先取满16个数据，这样就是很精确和简洁的求平均值的算法）
+
+    u32 isum =0;
+    u32 icount =0;
+
+   if (icount<=16)
+      icount++;
+   else
+      icount=16+1;
+
+    if( icount <=16)
+    {
+         isum =  isum + inew;
+         iavr = inew;
+    }
+    else
+    {
+       isum = isum - (isum >>4) + inew;
+       iavr = (u16)(isum >>4); 
+    }
+
+
+
+
+
+
+
+
+
+

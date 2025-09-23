@@ -1,0 +1,33 @@
+
+
+//µ÷ÓÃÊ¾Àý£º
+ ivol[5]={0xa5, 0x03, 0x8b, 0x08, checksum };     //checksum = 0x3b
+
+UINT8 get_checksum_8(UINT8 *ival, UINT32 inum)
+{
+   UINT32 i =0;
+   UINT8 iret =0;
+   UINT16 isum =0;
+   
+   for (i=0; i<inum; i++)
+   {
+      isum += ival[i];      
+   }
+   
+   iret = (UINT8)(isum & 0xff);
+   
+   return iret;
+   
+}
+
+void set_volume(UINT8 ivol)
+{
+   UINT8 icmd[5]={0xa5, 0x03, 0x8b, 0, 0 };
+   
+   icmd[3] = ivol;
+   icmd[4] = get_checksum_8(icmd,4); 
+   
+}
+
+
+

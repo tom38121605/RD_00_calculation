@@ -1,0 +1,140 @@
+
+
+main()
+{
+
+   while(1)
+   {  
+
+         //do with uart
+         if(flg_rx==1)
+         {         
+            flg_rx=0;  
+            dowithuart(); 
+         }     
+
+   } 
+
+}
+
+
+//说明1： P16为timeline，计算rx中断的运行时间，可选择去掉
+
+//uart0
+void dowithuart(void);
+
+UINT8 flg_rxin1 =0;
+UINT8 flg_rxin2 =0;
+UINT8 irxnum =0;
+
+#define RXDATALEN 20
+UINT8  irxdata[RXDATALEN] =0;
+UINT8  irxdata2[RXDATALEN] =0; 
+
+UINT8 irxcount = 0;
+UINT8 irxcount2 = 0;
+UINT8 flg_rx=0;
+
+#define CMDHEADER1    0xA5
+#define CMDHEADER2    0x03
+
+#define CMDGETVOLUME  0x8B
+#define CMDGETSTATE   0x89
+
+void SerialPort0_ISR(void) interrupt 4 
+{
+   UINT8 cuartbyte=0;
+   
+P16 =1;
+   
+   if (RI==1) 
+   {         
+      clr_RI;      
+
+      cuartbyte = SBUF; 
+      
+      //flg_rx=1;
+      
+      
+      if( (flg_rxin1==0) && (cuartbyte != CMDHEADER1 ) )
+         {P16 =0;return;}
+      
+      if( (flg_rxin1==0) && (cuartbyte == CMDHEADER1 ) )
+      {
+         flg_rxin1=1;
+         irxnum = 4;
+         P16 =0;return;        
+      }
+
+      if( (flg_rxin1==1))
+      {            
+         irxcount++;
+         
+         if (irxcount<irxnum)
+         {                  
+            irxdata[irxcount-1] = cuartbyte;
+            P16 =0;return;  
+         }
+         else 
+         {
+            irxdata[irxcount-1] = cuartbyte;
+            
+            //if( (irxdata[0] == CMDGETVOLUME) || (irxdata[0] == CMDGETSTATE) )
+            {
+               flg_rx=1;  
+               irxcount2 = irxcount;               
+               memcpy(irxdata2, irxdata, irxcount2);
+
+            }
+            
+            flg_rxin1 =0;
+            flg_rxin2 =0;
+            irxcount=0;
+            
+            P16 =0;return; 
+         }   
+          
+      }
+    
+   }   
+   
+   if(TI==1)   
+      clr_TI;     
+   
+P16 =0;   
+   
+}
+
+
+
+void dowithuart(void)
+{
+   UINT8 stemp[20]={0}; 
+ 
+      switch (irxdata2[0])
+      {
+         
+         case CMDGETVOLUME:            
+         
+            //if(irxdata2[0] <21)
+            {
+               sprintf (stemp,"v: %bx\r\n",irxdata2[1] ); 
+               iputs0(stemp);
+               Switch_Delay1ms(2);
+            }
+               
+            break;   
+         
+         case CMDGETSTATE:
+            
+            sprintf (stemp,"s: %bx\r\n",irxdata2[1] ); 
+            iputs0(stemp);
+            Switch_Delay1ms(2);
+         
+            break;            
+         
+         default:            
+            break;            
+      }          
+         
+}  

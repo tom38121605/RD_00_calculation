@@ -1,0 +1,74 @@
+
+
+算法简介： 
+
+  1. 先取得Harm_Val，这个比较简单，就是上升和下降
+  2. 再取得LFSR, 这一步不太理解，LFSR的初始种子值是0xff
+  3. 取得新的iout值，这个就是pwm值，是由上面的Harm_Val和LFSR组成
+  4. 过滤低频，这一步已基本理解
+
+
+static S16 Harm_Val = 0x00;       
+static UINT16 LFSR = 0xff;          // Any non-zero value will work as the seed
+static S16 LPF, L_OUT, S_OUT, LSB = 0x100;
+
+
+
+//取得Harm_Val （先从0变到1fe，再从1fe变到0，按步长逐次变化）
+
+   if （正玄向上）
+
+      Harm_Val = (Harm_Val + 5);   //最大到0x01fe为止  (这里INCR=5，如果INCR=0，则步长为0，Harm_Val不起作用，一直为0或不变)
+      0x01fe时，方向变为正玄向下；
+
+   if （正玄向下）
+
+      Harm_Val = (Harm_Val - 5);   //最小到0x0001为止
+      到0时，方向变为正玄向上；
+
+
+//取得LFSR  （待理解，整个算法，就这里不是太明了  -- 有待理解）
+
+   LSB = LFSR & 0x01u;                                         // 取得最低位
+   LFSR = (UINT16)LFSR >> 1;                                   // 右移一位
+   if (LSB)                                                    // 如果最低位是1
+      LFSR ^= 0xB400u;                                         //异或处理
+
+
+//取得新的iOUT
+
+   iOUT = LFSR >> (1 + 7u) ;
+   iOUT_lit = Harm_Val >> 4;   // Harm_Val/16
+   iOUT = iOUT + iOUT_lit;
+
+
+
+// 过滤低频  （相当于 iOUT 与 old的差值，除以32  -- 已理解，如果相邻两个值的差值相差很小，则不变 ）  
+   iOUT = s16(iOUT - iOUT_old) ;
+   iOUT = iOUT  >> 5
+   iOUT = iOUT + iOUT_old ;
+
+   iOUT_old = iOUT;
+
+
+   PWM2H = iOUT >>8;
+   PWM2L = iOUT & 0xff;
+
+   set_LOAD;
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+

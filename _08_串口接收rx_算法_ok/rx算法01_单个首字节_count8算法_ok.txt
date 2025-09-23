@@ -1,0 +1,158 @@
+
+//uart0
+UINT8 flg_rxin1 =0;
+UINT8 flg_rxin2 =0;
+UINT8 irxnum =0;
+
+#define RXDATALEN 20
+UINT8  irxdata[RXDATALEN] =0;
+UINT8  irxdata2[RXDATALEN] =0; 
+
+UINT8 irxcount = 0;
+UINT8 irxcount2 = 0;
+UINT8 flg_rx=0;
+
+#define CMDHEADER1    0xA5
+#define CMDGETVOLUME  0x8B
+#define CMDGETSTATE   0x89
+
+
+main()
+{
+
+   InitialUART0_Timer3(115200); 
+   TI = 1;
+   set_ES;           
+   set_EA;           
+   
+   iputs0("start................\r\n"); 
+
+   while(1) 
+   {
+        do with uart
+        dowithuart();
+   }
+
+}
+
+void SerialPort0_ISR(void) interrupt 4 
+{
+   UINT8 cuartbyte=0;
+   
+   if (RI==1) 
+   {         
+      clr_RI;      
+
+      cuartbyte = SBUF; 
+      
+      //flg_rx=1;
+      
+      
+      if( (flg_rxin1==0) && (cuartbyte != CMDHEADER1 ) )
+         return;
+      
+      if( (flg_rxin1==0) && (cuartbyte == CMDHEADER1 ) )
+      {
+         flg_rxin1=1;
+         //irxdata0[irxcount++] = cuartbyte;
+         return;        
+      }
+
+      if( (flg_rxin2==0) && (flg_rxin1==1))
+      {
+         flg_rxin2=1;
+         //irxdata0[irxcount++] = cuartbyte;
+         
+         irxnum = cuartbyte;
+         if(irxnum ==0)
+         {
+            flg_rxin1 =0;          
+            flg_rxin2 =0;          
+            irxcount =0;              
+         }
+         return;    
+      }
+
+      
+      if( (flg_rxin2==1))
+      {            
+         irxcount++;
+         
+         if (irxcount<irxnum)
+         {                  
+            irxdata[irxcount-1] = cuartbyte;
+            return;  
+         }
+         else 
+         {
+            irxdata[irxcount-1] = cuartbyte;
+            
+            //if( (irxdata[0] == CMDGETVOLUME) || (irxdata[0] == CMDGETSTATE) )
+            {
+               flg_rx=1;  
+               irxcount2 = irxcount;               
+               memcpy(irxdata2, irxdata, irxcount2);
+            }
+            
+            flg_rxin1 =0;
+            flg_rxin2 =0;
+            irxcount=0;
+            
+            return; 
+         }   
+          
+      }
+    
+   }   
+   
+   if(TI==1)   
+      clr_TI;     
+   
+}
+
+
+void dowithuart(void)
+{
+   UINT8 stemp[20]={0}; 
+      
+   if(flg_rx==1)
+   {
+      
+      flg_rx=0;
+      
+      //sprintf (stemp,"num,buf: %bu,%bx,%bx,%bx\r\n",irxnum,irxdata2[0],irxdata2[1],irxdata2[2]);          
+      //iputs0(stemp);
+      //Switch_Delay1ms(20); 
+      
+      
+      switch (irxdata2[0])
+      {
+         
+         case CMDGETVOLUME:
+            
+            sprintf (stemp,"vol: %bx\r\n",irxdata2[1] ); 
+            iputs0(stemp);
+            Switch_Delay1ms(2);
+            
+            break;   
+         
+         case CMDGETSTATE:
+            
+            sprintf (stemp,"sta: %bx\r\n",irxdata2[1] ); 
+            iputs0(stemp);
+            Switch_Delay1ms(2);
+         
+            break;   
+         
+         
+         default:
+            
+            break;   
+         
+      }         
+      
+   }
+         
+}  
+
+

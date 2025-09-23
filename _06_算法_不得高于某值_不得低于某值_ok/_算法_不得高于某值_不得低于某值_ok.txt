@@ -1,0 +1,14 @@
+
+//向上不得高于某值
+
+         if(icur<20)
+            icur ++;
+         else
+            icur=20
+
+//向下不得低于某值
+
+         if(icur>0)
+            icur--;
+         else
+            icur=0;

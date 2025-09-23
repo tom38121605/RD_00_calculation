@@ -1,0 +1,53 @@
+
+接近传感器型号： IQS620A
+参考MCU V32版本
+
+
+一。过滤767等ltachk突然变大的算法：
+
+   1. 开机，取得chk_first12
+   2. 设置flg_comeined, 当事件 INx2， 则=1
+   3. 设置flg_comeouted, 当事件 OUTx2 ， 并且flg_comeined==1, 则=1
+   3. 此时（flg_comeouted=1时），取得chk_second12 = newLTAvalue12.
+   4. 如果左右耳机中，只要有一个chk_second>chk_first+30, 则flg_openmode=1
+   5. 如果flg_openmode=0, 当chknew12>chkprev1200时，则无效
+   5. 如果flg_openmode=1, 当chknew12>chkprev12+80时，则无效
+   5. 还要加个条件，两个event或prox都为0  （这个应该已经早就有了）
+
+
+二。判断戴在头上开机后，第一次取下的接近感应:  （并在此过程中也做防突变算法）
+
+      #define OPENMODECOUNT2L 25  
+      #define OPENMODECOUNT2R 8
+
+   1. 开机，取得chk_first12
+   2. 设置flg_firstout， 当左耳     newLTAvalue1>=(chk_first1+OPENMODECOUNT2L)
+                                并且右耳  newLTAvalue2>=(chk_first2+OPENMODECOUNT2R)
+                                则，flg_firstout =1;
+
+
+   下面是取下单耳和防突变的算法： （跟上面不一样的是，左右耳要做不同的处理，因为开机会压左耳）
+   不仅要防突变，还要考虑两边耳朵的弹力恢复。（下面的算法着重点在于第一次戴上开机后，取下单耳，还能保持播放）
+
+
+   3. 如果取下的是左耳
+
+       如果flg_firstout=0, 当chknew12>chkprev12+100时，则无效
+       如果flg_firstout=1, 当chknew12>chkprev12+100时，则无效
+
+
+   3. 如果取下的是右耳
+
+       如果flg_firstout=0, 当chknew12>chkprev12+135时，则无效
+       如果flg_firstout=1, 当chknew12>chkprev12+100时，则无效
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,110 @@
+#define VOLDELAYMIN 75
+
+//volume: from ivol to 0, step 2
+void setvolumedown(UINT8 ivol, UINT16 idelaytime )
+{
+   UINT16 istepdelay =0;  
+
+   istepdelay = (UINT16)(idelaytime/ivol);    
+   
+   if(istepdelay < VOLDELAYMIN)
+      istepdelay = VOLDELAYMIN;
+   
+   while (ivol)
+   {
+      set_realvolume(ivol);                  
+      Switch_Delay1ms(istepdelay);  
+      
+      if(ivol >=2)
+         {ivol--; ivol--; } 
+      else
+         break;         
+   } 
+   
+ 
+   ivol =0;
+   set_realvolume(ivol);                  
+   Switch_Delay1ms(istepdelay);     
+
+}  
+
+//volume: from ivol to 0, step 1
+void setvolumedown(UINT8 ivol, UINT16 idelaytime )
+{
+   UINT16 istepdelay =0;  
+
+   istepdelay = (UINT16)(idelaytime/ivol);    
+   
+   if(istepdelay < VOLDELAYMIN)
+      istepdelay = VOLDELAYMIN;
+   
+   while (ivol)
+   {
+      set_realvolume(ivol);                  
+      Switch_Delay1ms(istepdelay);  
+      ivol--;    
+   } 
+   
+   set_realvolume(0);                  
+   Switch_Delay1ms(istepdelay);     
+
+}  
+
+
+//volume: from 0 to ivol , step 2
+void setvolumeup(UINT8 ivol, UINT16 idelaytime )
+{
+   UINT16 istepdelay =0;  
+   UINT8 istepvol =0;  
+
+   istepdelay = (UINT16)(idelaytime/ivol);     
+   
+   if(istepdelay < VOLDELAYMIN)
+      istepdelay = VOLDELAYMIN;   
+   
+   while (istepvol<=ivol)
+   {
+      set_realvolume(istepvol);                  
+      Switch_Delay1ms(istepdelay); 
+
+      if(ivol <=1)
+         break;
+      else if( istepvol<= (ivol-2) )      
+         {istepvol++; istepvol++; }
+      else
+        break;          
+   }   
+ 
+   if(istepvol<ivol)
+   {
+      set_realvolume(ivol);                  
+      Switch_Delay1ms(istepdelay); 
+   }      
+
+} 
+
+
+//volume: from 0 to ivol, step 1
+void setvolumeup(UINT8 ivol, UINT16 idelaytime )
+{
+   UINT16 istepdelay =0;  
+   UINT8 istepvol =0;  
+
+   istepdelay = (UINT16)(idelaytime/ivol);     
+   
+   if(istepdelay < VOLDELAYMIN)
+      istepdelay = VOLDELAYMIN;   
+   
+   while (istepvol<=ivol)
+   {
+      set_realvolume(istepvol);                  
+      Switch_Delay1ms(istepdelay);                    
+      istepvol++;     
+   } 
+
+} 
+
+
+
+
+

@@ -1,0 +1,56 @@
+
+------移位乘法算法（待理解）-----------
+
+BYTE	mul_y1, mul_x1;
+WORD	mul_t2;
+void    Byte_Mul_Byte (void)
+{    
+    //mul_t2[W]    =    mul_x1[B] * mul_y1[B]
+    mul_t2$1    =    0;
+    BYTE    cnt;
+    cnt    =    8;
+
+    do
+    {
+        mul_x1    >>=    1;
+        if (CF)        
+            mul_t2    +=    (mul_y1 << 8);
+       
+        mul_t2    >>>=    1;
+    } while (--cnt);
+ 
+
+------移位除法算法（待理解）-----------
+
+WORD    div_src2;
+BYTE    div_val;
+static    void    Word_Div_Byte (void)
+{    //    div_src2[W] / div_val[B]    =    div_src2[W] * div_val[B] + div_res[B]
+    BYTE    div_cnt, div_tmp, div_res;
+    div_cnt    =    0;
+    div_res    =    0;
+    goto    div_shf;
+
+    do
+    {
+        slc        div_res;
+        slc        div_tmp;
+        div_cnt++;
+        div_res    -=    div_val;
+
+        if (!div_tmp.0 && CF)
+        {
+            div_res    +=    div_val;
+            CF    =    0;
+        }
+        else    CF    =    1;
+div_shf:
+        div_src2    <<<=    1;
+    } while (! div_cnt.4);
+}
+
+
+
+
+
+
