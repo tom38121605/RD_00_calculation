@@ -1,7 +1,0 @@
-".\Objects\SNOOZ.obj",
-".\Objects\Common.obj",
-".\Objects\Delay.obj",
-".\Objects\STARTUP.obj" 
-TO ".\Objects\snooz" 
-PRINT(".\Listings\snooz.m51") RAMSIZE(256) 
-DISABLEWARNING (16) 

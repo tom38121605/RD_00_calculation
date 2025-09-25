@@ -1,9 +1,0 @@
-".\Output\PUTCHAR.obj",
-".\Output\main.obj",
-".\Output\i2c_VCNL3020.obj",
-".\Output\Delay.obj",
-".\Output\Common.obj",
-".\Output\STARTUP.obj" 
-TO ".\Output\GS331" 
-PRINT(".\LST\GS331.m51") RAMSIZE(256) 
-DISABLEWARNING (16) 

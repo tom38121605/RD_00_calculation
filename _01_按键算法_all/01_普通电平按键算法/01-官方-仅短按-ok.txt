@@ -1,0 +1,32 @@
+
+优点：逻辑清晰，代码简洁，上手快
+缺点：10ms延时略有影响系统反应速度，功能单一扩展性差
+
+
+
+while(1)
+
+      static uint8_t flg_keydown1=0;  
+      static uint8_t flg_keyvalue1=0;  
+  
+        if ( ( LL_GPIO_ReadInputPort(GPIOA) & (1<<8) ) == 0)
+        {
+
+            LL_mDelay(10); // 消抖
+            if ( (LL_GPIO_ReadInputPort(GPIOA) & (1<<8) ) == 0)
+            {
+                //iputs1("down\r\n"); // 按下后后打印
+                flg_keydown1 = 1; // 标记按下
+            }
+        }
+        else
+        {
+
+            // 如果之前按下，现在弹起
+            if (flg_keydown1)
+            {
+                iputs1("up\r\n"); // 弹起后打印
+                flg_keydown1 = 0;       // 清零标志
+            }
+        }
+
