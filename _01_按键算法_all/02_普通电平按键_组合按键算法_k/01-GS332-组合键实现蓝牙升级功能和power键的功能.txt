@@ -1,0 +1,396 @@
+
+
+
+
+void powerkey_scan(void)
+{
+   
+   if( POWER_KEY_PIN)
+   {      
+      Timer0_Delay1ms(10); 
+      
+      if(POWER_KEY_PIN)           
+         flg_keydown10=1;             
+   }
+   
+   else if(!POWER_KEY_PIN)
+   {
+      if(flg_keydown10==1)      //add
+         Timer0_Delay1ms(10);
+      
+      if(!POWER_KEY_PIN)               
+         flg_keydown10 = 0;  
+   }      
+   
+}
+
+
+//#define SHORTPWKEYCOUNT  1  
+#define SHORTPWKEYCOUNT  5  
+
+
+//#define LONGPWKEYCOUNT1  20    
+//#define LONGPWKEYCOUNT1B 30    
+
+#define LONGPWKEYCOUNT2 112  //3s+-
+//--#define LONGPWKEYCOUNT2 20  //400ms
+
+void powerkey_check(void)
+{
+   static UINT8 flg_downlongkey1=0;
+   //static UINT32 ilongpowercount2=0;
+   
+   if (flg_downlongkey1==0) 
+   {
+   
+      //powerkey
+      if (flg_keydown10) 
+      {
+         ikeynum10++;          
+
+         if(flg_power==0)
+         {
+            if(ikeynum10>=SHORTPWKEYCOUNT)
+               {ikeyvalue10 =1; flg_keycome10=1; flg_downlongkey1=1;}             
+         }  
+         else
+         {            
+            if(ikeynum10>=LONGPWKEYCOUNT2)
+               {ikeyvalue10 =3; flg_keycome10=1; flg_downlongkey1=1;} 
+         }           
+
+      }         
+      else
+      {   
+   
+         if (ikeynum10<SHORTPWKEYCOUNT)   
+             ikeyvalue10 =0;         
+         else if (ikeynum10<LONGPWKEYCOUNT2)  
+             {ikeyvalue10 =1; flg_keycome10=1;} 
+         else          
+             {ikeyvalue10 =3; flg_keycome10=1;}     
+             
+      } 
+      
+   }
+   else
+   {
+
+      if (flg_keydown10==0) 
+      {                 
+         flg_downlongkey1=0; 
+         ikeynum10=0; ikeyvalue10=0;    
+      }       
+      
+   }   
+         
+}
+
+void powerkey_process(void)
+{      
+   UINT8 sbuf1[10] ={0};
+   UINT8 stemp[20] ={0};
+
+
+   if(flg_download_checking ==1)  return;   //如果开机检测到“usb + power + v-”，蓝牙要更新，则忽略普通按键功能，退出
+     
+      
+   // power key1
+   if(ikeyvalue10 == 1)
+   {
+      ikeynum10=0; ikeyvalue10=0;      
+
+      if(flg_power==0)
+      {          
+      
+         //--poweron();  
+
+         //Normal power up,change P02 direction to input
+         PAIR_DET_INPUT_MODE;   
+         
+         
+         //open power
+         MAIN_POWER_PIN=1;   
+         
+         flg_standby =0;   
+         flg_reset =0;
+
+         
+         //app init
+         app_init();  
+         
+         //--BACK_LED_PIN=1;   //back led   
+
+         
+         //get adc
+         getadcvalue_first(); 
+         
+            
+         //check lowbatt2
+         if(flg_channel==3) 
+         {  
+            UINT8 i=0;            
+            flg_channel =0;
+            
+            
+            for(i=0;i<10;i++)
+            {
+               if(iadcvalue2B<=PERCENT40)
+                  break;
+
+               Timer0_Delay1ms(10);           
+               getadcvalue_first();    
+            } 
+            
+            iadcvalue2_avr = iadcvalue2B;
+            sprintf (stemp,"adcfirst,chk: %u,%bu\r\n",iadcvalue2B,flg_lowclosechk); 
+            iputs0(stemp);  
+            Timer0_Delay1ms(10);      
+            
+            
+            if( flg_lowclosechk==1)
+            {
+               
+               //check low batt
+               if( !USB_DET_PIN)  //no usb   
+               {                  
+                  
+                  if (iadcvalue2_avr <=PERCENT40)        //3298 20% , 3540 30% , 3625 40%
+                  {                        
+                     poweron2off_nobatt();    
+                     return;      
+                  }
+                  else   
+                  {      
+                     
+                     //----------------------I2C -------------------------
+                    
+                     //open i2c
+                     set_I2CEN;                     
+                     sbuf1[7] = 0;            //exit low batt
+                     i2c_write(FIRSTI2CREG+7, sbuf1+7, 1);                     
+                     Timer0_Delay1ms(10);  
+                     clr_I2CEN;                          
+                     
+                     //----------------------I2C ---end----------------------    
+                     
+                  }
+                  
+               }                          
+               
+            }
+            
+         }  
+         
+         
+         if(flg_voicemode ==0)  //0 -- BT, 1 -- AUX
+            poweron_BT(); 
+         else
+            poweron_AUX();   
+            //--poweron_AUX_sound();   
+
+         flg_power=1;  
+         
+      }            
+      else
+      {
+       
+         //--poweroff();
+         
+         Timer0_Delay1ms(100);
+         
+         //back led 
+         BACK_LED_PIN=0;     
+         
+         //pairing led
+         PAIRING_LED_PIN=0;
+         
+         //charge led
+         CHARGE_LED_PIN=0;      
+         
+         
+         if(flg_voicemode ==0)  //0 -- BT, 1 -- AUX
+            //poweroff_BT();
+            flg_poweroffBT = 1;
+         else              
+            //poweroff_AUX();  
+            flg_poweroffAux=1;
+         
+      }    
+
+   }
+   
+   
+   //power key2
+   if(ikeyvalue10 == 2)
+   {
+      ikeynum10=0; ikeyvalue10=0;  
+      
+      //iputs0("power key in\r\n");  
+   }  
+
+   //power key3
+   if(ikeyvalue10 == 3)
+   {
+      
+      ikeynum10=0; ikeyvalue10=0; 
+      
+      
+#ifdef SNOOZBABY  
+      
+      if(flg_power==1)
+      {
+         //--poweroff();
+         
+         Timer0_Delay1ms(100);
+         
+         //back led 
+         BACK_LED_PIN=0;     
+         
+         //pairing led
+         PAIRING_LED_PIN=0;
+         
+         //charge led
+         CHARGE_LED_PIN=0;      
+         
+         
+         if(flg_voicemode ==0)  //0 -- BT, 1 -- AUX
+            //poweroff_BT();
+            flg_poweroffBT = 1;
+         else              
+            //poweroff_AUX();  
+            flg_poweroffAux=1;
+         
+      }  
+      
+#endif
+
+#ifdef SNOOZGO  
+
+      if(flg_power==1)
+      {
+
+         BACK_LED_PIN = ~BACK_LED_PIN; 
+         //--ibackledbt=(ibackledbt ==0?1:0);     
+         ibackledaux=(ibackledaux ==0?1:0);  
+         
+            
+         //write to i2c
+         set_I2CEN;            
+         sbuf1[5] = ibackledaux;
+         //--sbuf1[6] = ibackledbt; 
+         i2c_write(FIRSTI2CREG+5, sbuf1+5, 2);            
+         Timer0_Delay1ms(10);   
+         clr_I2CEN;   
+         
+      }  
+      
+#endif
+      
+       
+   }    
+        
+}
+
+
+//检测到组合键： usb插入 + 按下power键 + 按下v-键， 给蓝牙发送一个10s的高电平（蓝牙检测到这个高电平则進入DUF更新状态）
+void scandownloadmode(void)   
+{     
+//   UINT32 idowncount =0;
+//   UINT8 flg_download_checking=0;
+   
+   //getadcvalue();
+   
+   //download ctrl
+   PAIR_DET_OUTPUT_MODE;
+   PAIR_DET_PIN=0;
+   
+   if( POWER_KEY_PIN  )     
+   
+      if( (iadcvalue >= ADC_VOLDEC ) && (iadcvalue <= ADC_VOLDEC2 ) )
+      {
+         Timer0_Delay1ms(10); 
+         
+         if( (iadcvalue >= ADC_VOLDEC ) && (iadcvalue <= ADC_VOLDEC2 ) )
+         {
+
+            flg_download_checking=1;
+            
+            if(idowncount++>DOWNLOADCOUNT)
+            {
+               idowncount=0;
+               
+               iputs0("in download mode\r\n");
+               flg_power2=1; 
+               //--MAIN_POWER_PIN=1;
+    
+               PAIR_DET_PIN=1;  
+               
+               //reset BT
+               BT_ONOFF_PIN=0;             
+               Timer0_Delay1ms(100);    
+               
+               BT_ONOFF_PIN=1;   
+               Timer0_Delay1ms(10000); 
+               //Timer0_Delay1ms(9800); 
+               
+               BT_ONOFF_PIN=0;  
+               Timer0_Delay1ms(100);     
+            }               
+            
+         }         
+      }         
+
+} 
+
+
+
+======================
+
+main
+
+   while(1)
+   {
+
+      ......
+
+      if(flg_power==0)  
+      {
+         if( USB_DET_PIN)     //usb input    
+         {                  
+            if(flg_power2==0)   
+            {        
+               
+               //get adc
+               getadcvalue();  
+               
+               //iputs0("run...\r\n"); 
+               scandownloadmode();
+            }  
+         }
+         else
+         {
+            flg_download_checking=0;
+            idowncount=0;
+         }
+      }
+      else
+      {
+         flg_download_checking=0;
+         idowncount=0;         
+      }
+            
+      //powerkey scan
+      powerkey_scan();      
+
+      //powerkey check
+      powerkey_check();  
+      
+      //dowith power key  
+      powerkey_process();    
+
+      ......
+
+  }
+
+
