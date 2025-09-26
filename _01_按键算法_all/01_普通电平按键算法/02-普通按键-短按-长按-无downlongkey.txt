@@ -1,4 +1,4 @@
-
+﻿
 说明1： PA8为低电平，表示按键按下
 说明2： flg_keycome1的作用： 表示已有按键按下，只要有短按或长按的按键按下，就把flg_keycome1置1
 说明3： 下面两句，可以测试按键按下去的长度，在示波器上看
@@ -6,7 +6,7 @@
          //if(ikeynum1==10){ikeynum1=0;LL_GPIO_ResetOutputPin( LED_GREEN_GPIO_Port, LED_GREEN_Pin);} //test press time end 
 
 
-优点： 可把延时10ms，改成延时1ms再计数10次，达到同样的延时而又能大大提高系统反应速度
+优点： 可把延时10ms，改成延时1ms再计数10次，达到同样的延时而又能大大提高系统反应速度  //跟官方短按比较
 缺点:  代码会多一点
 
 

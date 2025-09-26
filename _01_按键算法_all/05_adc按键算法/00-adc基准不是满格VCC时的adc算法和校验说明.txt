@@ -1,54 +1,5 @@
 
-
-说明1：   flg_downlongkey3本身就相当于flg_keyup
-
-         //key3 tone
-         if (flg_downlongkey3==0)    //flg_downlongkey3本身就相当于flg_keyup (只有keyup=1后，flg_downlongkey3才能恢复为0)
-         {   
-            
-            if (flg_keydown3)  //如果在这里加一个flg_keyup==1防止长按后连按，则逻辑上更标准一些 （不需要，看上面）
-            {
-               ikeynum3++;   
-               
-               if(ikeynum3>=LONGKEYCOUNT2)
-                  {ikeyvalue3 =2; flg_keycome3=1; flg_downlongkey3=1;}  //如判断连按，这里需加一句flg_keyup=0 （不需要，看上面）
-
-            }          
-            else
-            {
-               
-               //if (ikeynum3<1) 
-               if (ikeynum3<TONEKEYCOUNT1) 
-                  {ikeyvalue3 =0; }
-               
-               else if( (ikeynum3>=TONEKEYCOUNT1) && (ikeynum3<LONGKEYCOUNT2) )
-                   {ikeyvalue3 =1; flg_keycome3=1;}  
-                   
-               //else          
-               else if(ikeynum3>=LONGKEYCOUNT2)               
-                   {ikeyvalue3 =2; flg_keycome3=1;}  
-                   
-               ikeynum3=0;    
-                   
-            } 
-            
-         }
-         else
-         {
-
-            if (flg_keydown3==0) 
-            {                 
-               flg_downlongkey3=0; 
-               ikeynum3=0; ikeyvalue3=0;    
-            }  
-            else
-               ;//ikeynum3=0;
-            
-         }   
-
-
-
-======================
+说明1： 这里的校准电压是内部带隙电压(Internal band-gap voltag)， 标准值是1.22V
 
 adc按键校准的原因和方法：
 
@@ -63,7 +14,10 @@ adc按键校准的原因和方法：
 
     具体如下：
     iadc =   Bandgap_Voltage * AIN_value  / BAND_value ;                  //mv        
-    iadc_key   =  Bandgap_Voltage * AIN_value  / BAND_3300             //mv     
+    iadc_key   =  Bandgap_Voltage * AIN_value  / BAND_3300             //mv      //待验证
+
+疑问1： 下面的计算是否合理
+            iadc =  Bandgap_Voltage * AIN_value  /  BAND_3300;     //或iadc= 3300 * AIN_value/ BAND_3300;    //待研究（要达到把vcc从3.3v调到2v，引脚adc的值基本不变）   
 
 
 

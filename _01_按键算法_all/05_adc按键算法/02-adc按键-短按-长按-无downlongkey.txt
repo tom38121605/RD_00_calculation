@@ -1,0 +1,944 @@
+﻿
+
+说明1： 这里的校准电压是内部带隙电压(Internal band-gap voltag)， 标准值是1.22V
+说明2： flg_keycome1的作用： 表示已有按键按下，只要有短按或长按的按键按下，就把flg_keycome1置1
+
+说明3： 各种adc电压说明
+            Bandgap_Voltage   -- 基准电压       //如： 1.2v的基准电压对应 500的adc寄存器读取值
+            iadcvalue2B           -- 电池电压
+            iadcvalue               --按键电压
+
+说明2B(待验证)： 用adc按键时，最好把3.3V的vcc作为adc基准值，且为12bit精度的满格4095 
+                        当vcc上下波动时，各档ADC也跟着上下波动， 它们的波动幅度和间隔幅度保持不变，不影响adc按键判断
+                        如VCC  <=> 4095， 则VCC/2 <=> 2048
+
+优点： 可把延时10ms，改成延时1ms再计数10次，达到同样的延时而又能大大提高系统反应速度
+
+疑问1： 下面的计算是否合理
+            iadc =  Bandgap_Voltage * AIN_value  /  BAND_3300;     //或iadc= 3300 * AIN_value/ BAND_3300;    //待研究（要达到把vcc从3.3v调到2v，引脚adc的值基本不变）   
+
+
+======================================================================
+
+
+//adc
+
+UINT16 BAND_value=0;
+
+#define BAND_3300  1526  
+
+#define RESISTOR_UP_K     100
+#define RESISTOR_DOWN_K   220
+ 
+UINT16 iadcvalue=0;  
+UINT16 iadcvalue_avr=0; 
+
+
+UINT16 iadcvalue2=0;  
+UINT16 iadcvalue2_avr=0; 
+
+UINT16 iadcvalue2B=0;   //BATT value
+
+
+---
+
+//---------V1.4-----------
+
+#define ADC_VOL_GAP                   200   //150
+
+//#define ADC_VOLBOTH                   (870 - ADC_VOL_GAP)
+#define ADC_VOLBOTH                   (871 - ADC_VOL_GAP)
+
+//#define ADC_VOLDEC                    (1200 - ADC_VOL_GAP)
+#define ADC_VOLDEC                    (1184 - ADC_VOL_GAP)
+
+#define ADC_VOLADD                    (1650 - ADC_VOL_GAP)   
+#define ADC_TONE                      (2200 - ADC_VOL_GAP)   
+
+//#define ADC_VOLBOTH2                   (870 + ADC_VOL_GAP)
+#define ADC_VOLBOTH2                   (871 + ADC_VOL_GAP)
+
+
+//#define ADC_VOLDEC2                    (1200 + ADC_VOL_GAP)
+#define ADC_VOLDEC2                    (1184 + ADC_VOL_GAP)
+
+#define ADC_VOLADD2                    (1650 + ADC_VOL_GAP)   
+#define ADC_TONE2                      (2200 + ADC_VOL_GAP)  
+
+
+#define ADC_BLUETOOTH                    (2626 - ADC_VOL_GAP)   //SNOOZ BUTTON
+#define ADC_BLUETOOTH2                   (2626 + ADC_VOL_GAP)   //SNOOZ BUTTON
+
+
+#define ADC_VOL_NC                  300   //(ADC_VOLDEC  - ADC_VOL_GAP)  
+
+//#define ADC_VOL_NC2                 (2200 + ADC_VOL_GAP)    //(ADC_BLUETOOTH + ADC_VOL_GAP)  
+#define ADC_VOL_NC2                 (2626 + ADC_VOL_GAP)    //(ADC_BLUETOOTH + ADC_VOL_GAP)  
+
+
+
+----------------------------------------------------
+
+double  Bandgap_Voltage;
+void READ_BANDGAP(void)
+{
+      UINT8 BandgapHigh,BandgapLow,BandgapMark;
+      double Bandgap_Value,Bandgap_Voltage_Temp;
+
+      set_IAPEN;
+      IAPCN = READ_UID;
+      IAPAL = 0x0d;
+      IAPAH = 0x00;
+      set_IAPGO;
+      BandgapLow = IAPFD;
+      BandgapMark = BandgapLow&0xF0;
+            
+        if (BandgapMark==0x80)
+        {
+                BandgapLow = BandgapLow&0x0F;
+                IAPAL = 0x0C;
+                IAPAH = 0x00;
+                set_IAPGO;
+                BandgapHigh = IAPFD;
+                Bandgap_Value = (BandgapHigh<<4)+BandgapLow;
+                Bandgap_Voltage_Temp = Bandgap_Value*3/4;
+                Bandgap_Voltage = Bandgap_Voltage_Temp - 33;            //the actually banggap voltage value is similar this value.
+        }
+        if (BandgapMark==0x00)
+        {
+                BandgapLow = BandgapLow&0x0F;
+                IAPAL = 0x0C;
+                IAPAH = 0x00;
+                set_IAPGO;
+                BandgapHigh = IAPFD;
+                Bandgap_Value = (BandgapHigh<<4)+BandgapLow;
+                Bandgap_Voltage= Bandgap_Value*3/4;
+        }
+        if (BandgapMark==0x90)
+        {
+                IAPAL = 0x0E;
+                IAPAH = 0x00;
+                set_IAPGO;
+                BandgapHigh = IAPFD;
+                IAPAL = 0x0F;
+                IAPAH = 0x00;
+                set_IAPGO;
+                BandgapLow = IAPFD;
+                BandgapLow = BandgapLow&0x0F;
+                Bandgap_Value = (BandgapHigh<<4)+BandgapLow;
+                Bandgap_Voltage= Bandgap_Value*3/4;
+        }
+        clr_IAPEN;
+      
+//            printf ("\n BG High = %bX",BandgapHigh); 
+//            printf ("\n BG Low = %bX",BandgapLow); 
+//            printf ("\n BG ROMMAP = %e",Bandgap_Voltage); 
+      
+}
+
+-----------------------------------------------------
+
+
+#define BATT_ADCSCANGAP 25
+
+void getadcvalue(void) 
+{  
+   UINT8 stemp[20]={0}; 
+   UINT16 AIN_value=0;
+   double iadc =0;
+   static UINT32 ibattcount=0;
+         
+
+#if ( (defined SNOOZGO) || (defined SNOOZBABY)  )
+   
+
+   //get batt adc
+   if(ibattcount++>=BATT_ADCSCANGAP)   //每扫描25次，重新取得一次adc基准值
+   {
+     ibattcount=0;      
+      
+      //-------------BAND-----------------
+      
+      Enable_ADC_BandGap;        //取得adc基准值
+      
+      CKDIV = 0x02;    
+      
+      clr_ADCF;
+      set_ADCS;                                         
+      while(ADCF == 0);  
+      
+      CKDIV = 0;    
+
+      BAND_value =  ADCRH ;
+      BAND_value <<=  4 ;
+      BAND_value |=  ADCRL & 0x0f ;      
+
+      //CKDIV = 0;    
+
+      Disable_ADC;                
+   
+      //-------------AIN1----------------- 
+      
+      Enable_ADC_AIN1;         //取得adc1的值 
+      
+      //CKDIV = 0x02;      
+      
+      clr_ADCF;
+      set_ADCS;                             
+
+      while(ADCF == 0);
+      
+      AIN_value =  ADCRH ;
+      AIN_value <<=  4 ;
+      AIN_value |=  ADCRL & 0x0f ;   
+      
+      //CKDIV = 0;    
+   
+      Disable_ADC;  
+
+      
+      iadc =   Bandgap_Voltage * AIN_value  / BAND_value ;  //mv      
+      iadcvalue2 = (UINT16)iadc;  
+ 
+      iadc =  iadc * (RESISTOR_UP_K + RESISTOR_DOWN_K) /RESISTOR_DOWN_K;       
+      iadcvalue2B = (UINT16)iadc;   
+      
+      flg_channel=2;      
+   }      
+    
+   else
+      
+#endif    
+   
+   {
+      //-------------AIN5-----------------
+      
+      Enable_ADC_AIN5;         //取得adc5的值
+      
+      clr_ADCF;
+      set_ADCS;                             
+
+      while(ADCF == 0);
+      
+      AIN_value =  ADCRH ;
+      AIN_value <<=  4 ;
+      AIN_value |=  ADCRL & 0x0f ; 
+    
+      Disable_ADC;   
+      
+      //iadc =   Bandgap_Voltage * AIN_value  / BAND_value;          
+      iadc =   Bandgap_Voltage * AIN_value  /  BAND_3300;       //或iadc= 3300 * AIN_value/ BAND_3300;    //待研究（要达到把vcc从3.3v调到2v，引脚adc的值基本不变）   
+      iadcvalue = (UINT16)iadc;
+
+      flg_channel=1;
+      
+   }   
+   
+}
+
+
+#define ADCKEYDELAY  10  //30
+void adckey_scan(void)
+{
+      
+   if( flg_channel==1 )
+   {
+      flg_channel=0;    
+
+      //iputs0("adc scan...\r\n");   
+      
+     
+      //iadc_key = (UINT16)((double)BAND_value / BAND_3300 * iadcvalue);  
+      iadc_key= iadcvalue;
+      
+      sprintf( sadctemp1, "adckey: %u\r\n", iadc_key);     
+      //sprintf( sadctemp2, "BanD:%u,adc:%u\r\n", BAND_value,iadcvalue_avr); 
+      
+
+      if(iadc_key >= ADC_VOL_NC2 )
+      {
+
+         Timer0_Delay1ms(ADCKEYDELAY); 
+
+         if(iadc_key >= ADC_VOL_NC2 )
+         {
+            //if(KEY0_NC_NULL==0) {iputs0(sadctemp1); Timer0_Delay1ms(2); iputs0("no key2\r\n"); Timer0_Delay1ms(2); }
+            //sprintf( sadcstate, "no key2\r\n");
+            
+            KEY0_NC_NULL =1;
+            flg_keydown1 = 0;
+            flg_keydown2 = 0;
+            flg_keydown3 = 0;
+            flg_keydown4 = 0;   
+            flg_keydown12 = 0;   
+            flg_keydown20 = 0;            
+            
+         }   
+         
+      } 
+
+#ifdef SNOOZBUTTONBT
+      
+      else if ( (iadc_key >= ADC_BLUETOOTH ) && (iadc_key <= ADC_BLUETOOTH2 ) )   //keep
+      {
+      
+         Timer0_Delay1ms(ADCKEYDELAY); 
+
+         if ( (iadc_key >= ADC_BLUETOOTH ) && (iadc_key <= ADC_BLUETOOTH2 ) )
+         {
+
+            //--if(flg_keydown4==0)  {iputs0(sadctemp1); Timer0_Delay1ms(2); iputs0("btn key\r\n"); Timer0_Delay1ms(2); }               
+            //sprintf( sadcstate, "btn key\r\n");
+
+            if(flg_keydown4==0)
+               ikeytouch4=1; 
+            
+         
+            KEY0_NC_NULL =0;
+            flg_keydown1 = 0;
+            flg_keydown2 = 0;
+            flg_keydown3 = 0;   
+            flg_keydown4 = 1;   
+            flg_keydown12 = 0;
+            flg_keydown20 = 0;
+
+            //--ikeyvalue4 = 1;           
+         }
+         
+      } 
+      
+#endif      
+
+#ifdef SNOOZBUTTON
+      
+      else if ( (iadc_key >= ADC_BLUETOOTH ) && (iadc_key <= ADC_BLUETOOTH2 ) )   //keep
+      {
+      
+         Timer0_Delay1ms(ADCKEYDELAY); 
+
+         if ( (iadc_key >= ADC_BLUETOOTH ) && (iadc_key <= ADC_BLUETOOTH2 ) )
+         {
+
+            //--if(flg_keydown4==0)  {iputs0(sadctemp1); Timer0_Delay1ms(2); iputs0("btn key\r\n"); Timer0_Delay1ms(2); }               
+            //sprintf( sadcstate, "btn key\r\n");
+
+            if(flg_keydown4==0)
+               ikeytouch4=1; 
+            
+         
+            KEY0_NC_NULL =0;
+            flg_keydown1 = 0;
+            flg_keydown2 = 0;
+            flg_keydown3 = 0;   
+            flg_keydown4 = 1;   
+            flg_keydown12 = 0;
+            flg_keydown20 = 0;
+
+            //--ikeyvalue4 = 1;           
+         }
+         
+      } 
+      
+#endif    
+      
+      //else if (iadc_key >= ADC_TONE )
+      else if ( (iadc_key >= ADC_TONE) && (iadc_key<= ADC_TONE2) )
+      {
+      
+         Timer0_Delay1ms(ADCKEYDELAY); 
+
+         if( (iadc_key >= ADC_TONE) && (iadc_key<= ADC_TONE2) )
+         {
+
+            //--if(flg_keydown3==0)  {iputs0(sadctemp1); Timer0_Delay1ms(2); iputs0("tone key\r\n"); Timer0_Delay1ms(2); }               
+            //sprintf( sadcstate, "tone key\r\n");
+
+         
+            KEY0_NC_NULL =0;
+            flg_keydown1 = 0;
+            flg_keydown2 = 0;
+            flg_keydown3 = 1;   
+            flg_keydown4 = 0;   
+            flg_keydown12 = 0;
+            flg_keydown20 = 0;
+
+            ikeyvalue3 = 1;           
+         }
+         
+      }
+
+      //else if (iadc_key >= ADC_VOLADD )
+      else if ( (iadc_key >= ADC_VOLADD )  &&  (iadc_key <= ADC_VOLADD2 )  )
+      {
+
+         Timer0_Delay1ms(ADCKEYDELAY);  
+
+         if( (iadc_key >= ADC_VOLADD )  &&  (iadc_key <= ADC_VOLADD2 )  )
+         {
+            //--if(flg_keydown2==0)  {iputs0(sadctemp1); Timer0_Delay1ms(2); iputs0("vol+ key\r\n"); Timer0_Delay1ms(2); }
+            //sprintf( sadcstate, "vol+ key\r\n");
+
+            if(flg_keydown2==0)
+               ikeytouch2=1;               
+            
+            KEY0_NC_NULL =0;
+            flg_keydown1 = 0;
+            flg_keydown2 = 1;
+            flg_keydown3 = 0;
+            flg_keydown4 = 0;   
+            flg_keydown12 = 0;
+            flg_keydown20 = 0;
+            
+            //--ikeyvalue2 = 1; 
+         }     
+         
+      }     
+      //else if(iadc_key >= ADC_VOLDEC )
+      else if( (iadc_key >= ADC_VOLDEC ) && (iadc_key <= ADC_VOLDEC2 ) )
+      {
+         
+         Timer0_Delay1ms(ADCKEYDELAY); 
+
+         if( (iadc_key >= ADC_VOLDEC ) && (iadc_key <= ADC_VOLDEC2 ) )
+         {
+            //--if(flg_keydown1==0) {iputs0(sadctemp1); Timer0_Delay1ms(2); iputs0("vol- key\r\n"); Timer0_Delay1ms(2); }
+            //sprintf( sadcstate, "vol- key\r\n");
+
+            if(flg_keydown1==0)
+               ikeytouch1=1;               
+            
+            
+            KEY0_NC_NULL =0;
+            flg_keydown1 = 1;
+            flg_keydown2 = 0;
+            flg_keydown3 = 0;
+            flg_keydown4 = 0;   
+            flg_keydown12 = 0;
+            flg_keydown20 = 0;
+            
+            //ikeyvalue1 = 1; 
+         }               
+      }   
+
+      //else if(iadc_key >= ADC_VOLBOTH )
+      else if( (iadc_key >= ADC_VOLBOTH ) && (iadc_key <= ADC_VOLBOTH2 ) )
+      {
+         
+         Timer0_Delay1ms(ADCKEYDELAY); 
+
+         if( (iadc_key >= ADC_VOLBOTH ) && (iadc_key <= ADC_VOLBOTH2 ) )
+         {
+            //if(flg_keydown12==0) {iputs0(sadctemp1); Timer0_Delay1ms(2); iputs0("vol22 key\r\n"); Timer0_Delay1ms(2); }
+            //sprintf( sadcstate, "vol22 key\r\n");      
+            
+            KEY0_NC_NULL =0;
+            flg_keydown1 = 0;
+            flg_keydown2 = 0;
+            flg_keydown3 = 0;
+            flg_keydown4 = 0;   
+            flg_keydown12 = 1;
+            flg_keydown20 = 0;
+            
+            //ikeyvalue12 = 1; 
+         }   
+         
+      } 
+
+      //else if(iadc_key <= ADC_VOL_NC )
+      //{
+      //   
+      //   Timer0_Delay1ms(ADCKEYDELAY); 
+
+      //   if(iadc_key <= ADC_VOL_NC )
+      //   {
+      //      if(KEY0_NC_NULL2==0) {iputs0(sadctemp1); Timer0_Delay1ms(2); iputs0("no key-\r\n"); Timer0_Delay1ms(2); }
+      //      //sprintf( sadcstate, "vol0 key\r\n");      
+      //      
+      //      KEY0_NC_NULL =0;
+      //      flg_keydown1 = 0;
+      //      flg_keydown2 = 0;
+      //      flg_keydown3 = 0;
+      //      flg_keydown4 = 0;   
+      //      flg_keydown12 = 0;
+      //      flg_keydown20 = 0;
+      //      KEY0_NC_NULL2 =1;
+      
+      //   }   
+      //   
+      //} 
+
+
+      else 
+      {         
+
+         //--if(flg_keydown20==0) {iputs0(sadctemp1); Timer0_Delay1ms(2); iputs0("err key\r\n"); Timer0_Delay1ms(2); }
+         //sprintf( sadcstate, "vol20 key\r\n");      
+         
+         KEY0_NC_NULL =0;
+         flg_keydown1 = 0;
+         flg_keydown2 = 0;
+         flg_keydown3 = 0;
+         flg_keydown4 = 0;   
+         flg_keydown12 = 0;
+         
+         flg_keydown20 = 1;     
+      }      
+       
+   }  
+
+}
+
+
+#define VOLKEYCOUNT1   7 
+#define VOLKEYCOUNT1B  8 
+#define VOLKEYCOUNT2   35
+
+//#define TONEKEYCOUNT1  8 
+#define TONEKEYCOUNT1  7 
+
+#define LONGKEYCOUNT3  400   //5S-
+#define BTKEYCOUNT1    7    
+
+void adckey_check(void)
+{   
+   static UINT8 flg_downlongkey3=0;
+   static UINT8 flg_downlongkey12=0;
+   
+   
+   //key1 vol-   
+   if (flg_keydown1) 
+   {
+      ikeynum1++;
+   }         
+   else
+   {      
+      ikeynum1 =0;
+      ikeytouch1 = 0;
+   }   
+   
+         
+   //key1 vol-
+   if( ( (ikeytouch1 == 1 ) && (ikeynum1 >=VOLKEYCOUNT1) ) || (ikeynum1 >=VOLKEYCOUNT2) ) 
+   {
+      ikeynum1 = 0;
+      ikeytouch1 = 0;
+      ikeyvalue1=1;
+   }
+   
+
+   //key2 vol+   
+   if (flg_keydown2) 
+   {  
+      ikeynum2++;
+   }         
+   else
+   {      
+      ikeynum2 =0;
+      ikeytouch2=0;
+   }  
+   
+   //key2 vol+
+   if( ( (ikeytouch2 == 1 ) && (ikeynum2 >=VOLKEYCOUNT1) ) || (ikeynum2 >=VOLKEYCOUNT2) ) 
+   {
+      ikeynum2 = 0;
+      ikeytouch2 = 0;
+      ikeyvalue2=1;
+   }
+   
+   
+   //key3 tone
+   if (flg_downlongkey3==0) 
+   {   
+      
+      if (flg_keydown3) 
+      {
+         ikeynum3++;   
+         
+         if(ikeynum3>=LONGKEYCOUNT2)
+            {ikeyvalue3 =2; flg_keycome3=1; flg_downlongkey3=1;} 
+
+      }         
+      else
+      {
+         
+         //if (ikeynum3<1) 
+         if (ikeynum3<TONEKEYCOUNT1) 
+            {ikeyvalue3 =0; }
+         
+         else if( (ikeynum3>=TONEKEYCOUNT1) && (ikeynum3<LONGKEYCOUNT2) )
+             {ikeyvalue3 =1; flg_keycome3=1;}  
+             
+         //else          
+         else if(ikeynum3>=LONGKEYCOUNT2)               
+             {ikeyvalue3 =2; flg_keycome3=1;}  
+             
+         ikeynum3=0;    
+             
+      } 
+      
+   }
+   else
+   {
+
+      if (flg_keydown3==0) 
+      {                 
+         flg_downlongkey3=0; 
+         ikeynum3=0; ikeyvalue3=0;    
+      }  
+      else
+         ;//ikeynum3=0;
+      
+   }   
+   
+   //key12 volboth
+   if (flg_downlongkey12==0) 
+   {   
+      
+      if (flg_keydown12) 
+      {
+         ikeynum12++;   
+         
+         //P0f =1;
+         if(ikeynum12>=LONGKEYCOUNT3)
+            {ikeyvalue12 =2; flg_keycome12=1; flg_downlongkey12=1;  
+             //P0f=0;
+            } 
+
+      }         
+      else
+      {
+         //P0f=0;  
+         
+         if (ikeynum12<1) 
+             ikeyvalue12 =0;
+         else if (ikeynum12<LONGKEYCOUNT3)
+             {ikeyvalue12 =1; flg_keycome12=1;}    
+         else          
+             {ikeyvalue12 =2; flg_keycome12=1;}  
+             
+      } 
+      
+   }
+   else
+   {
+
+      if (flg_keydown12==0) 
+      {                 
+         flg_downlongkey12=0; 
+         ikeynum12=0; ikeyvalue12=0;    
+      }       
+      else 
+         ; //keynum3=0;      
+   }      
+   
+   
+   
+   //key4 bluetooth  
+   if (flg_keydown4) 
+   {  
+      ikeynum4++;
+   }         
+   else
+   {      
+      ikeynum4 =0;
+      ikeytouch4=0;
+   }  
+   
+   //key4 bluetooth  
+   if( ( (ikeytouch4 == 1 ) && (ikeynum4 >=BTKEYCOUNT1) )   ) 
+   {
+      ikeynum4 = 0;
+      ikeytouch4 = 0;
+      ikeyvalue4=1;
+   }      
+         
+}   
+ 
+
+void adckey_process(void)
+{
+   UINT8 sbuf1[10] ={0};
+   
+   //key1  vol-
+   //if( (ikeyvalue1==1) && (flg_keydown1==0) )
+   if (ikeyvalue1==1)
+   {
+      ikeyvalue1=0;    
+
+      if(flg_reset ==1) return;      
+      
+      if(flg_voicemode==0)   //0 -- BT, 1 -- AUX
+      {         
+         iputbytes0(svoldec,5);  
+         Timer0_Delay1ms(100);          
+         
+         //if(ibtvol >0)
+         //   ibtvol--;         
+
+         //set_realvolume(ibtvol); 
+         //Timer0_Delay1ms(10); 
+      } 
+      else
+      {
+         //if(inoisebasevol >0)
+         if(inoisebasevol >NOISEBASEVOLBOTTOM)
+            inoisebasevol--;
+         
+         inoisevolume=get_noisevolume(WN_MODE);
+         set_realvolume(inoisevolume); 
+         Timer0_Delay1ms(100);  
+         
+         
+         //write to i2c
+         set_I2CEN;
+         sbuf1[3] = inoisebasevol;      
+         i2c_write(FIRSTI2CREG+3, sbuf1+3, 1);
+         Timer0_Delay1ms(10);   
+         clr_I2CEN;        
+         
+      }   
+      
+//--iputs0("v- in\r\n");      
+      
+   }
+
+   
+   //key2  vol+
+   //if( (ikeyvalue2==1) && (flg_keydown2==0) )
+   if( ikeyvalue2==1)
+   {
+      ikeyvalue2=0;
+      
+      if(flg_reset ==1) return;      
+
+      if(flg_voicemode==0)   //0 -- BT, 1 -- AUX
+      {        
+         iputbytes0(svoladd,5); 
+         Timer0_Delay1ms(100);         
+
+         //if( ibtvol < BTVOLTOP )
+         //   ibtvol++;    
+
+         //set_realvolume(ibtvol); 
+         //Timer0_Delay1ms(10);       
+      } 
+      else
+      {
+         if( inoisebasevol < NOISEBASEVOLTOP )
+            inoisebasevol++;
+         
+         inoisevolume=get_noisevolume(WN_MODE);
+         set_realvolume(inoisevolume); 
+         Timer0_Delay1ms(100);  
+         
+         
+         //write to i2c
+         set_I2CEN;
+         sbuf1[3] = inoisebasevol;      
+         i2c_write(FIRSTI2CREG+3, sbuf1+3, 1);
+         Timer0_Delay1ms(10);   
+         clr_I2CEN;         
+      } 
+
+//--iputs0("v+ in\r\n");
+
+   }   
+
+
+   //key3 tone
+   if  (flg_keycome3==1 )
+   {
+      flg_keycome3=0;
+
+      if (ikeyvalue3 ==1)      //short 
+      {
+         
+         ikeynum3=0; ikeyvalue3=0; 
+         
+         if(flg_voicemode ==0)  //BT MODE
+         {
+            iputbytes0(splaypause,5);
+            Timer0_Delay1ms(100);
+
+         }
+         else if(flg_voicemode ==1)  //AUX MODE
+         {    
+            switchnoise();    
+         }
+         
+//--iputs0("tonekey in\r\n");
+         
+      }
+
+      //switch BT and AUX 
+      if (ikeyvalue3 ==2)   //long
+      {  
+         
+         //ikeynum3=0; ikeyvalue3=0;         
+         ikeyvalue3=0;         
+         
+
+#ifdef SNOOZGO   
+         
+         if(flg_voicemode==0)    //0 -- BT, 1-- AUX      
+
+            #ifdef TESTEQMODE      
+               switch2AUX();
+            #else      
+               {Timer0_Delay1ms(200); flg_switchaux =1;} 
+            #endif           
+
+         else  
+            switch2BT();          
+#endif
+      
+
+#ifdef SNOOZBUTTONBT     //--only for test
+         
+         if(flg_voicemode==0)    //0 -- BT, 1-- AUX       
+
+            #ifdef TESTEQMODE      
+               switch2AUX();
+            #else      
+               flg_switchaux =1;
+            #endif     
+
+         else  
+            switch2BT();          
+#endif   
+
+         
+#ifdef SNOOZBABY          
+
+      if (flg_voicemode==0)     //0 -- BT, 1 -- AUX
+         ;//{BACK_LED_PIN = ~BACK_LED_PIN; ibackledbt=(ibackledbt ==0?1:0);}
+      else         
+         {BACK_LED_PIN = ~BACK_LED_PIN; ibackledaux=(ibackledaux ==0?1:0);}      
+
+      //write to i2c
+      set_I2CEN;            
+      sbuf1[5] = ibackledaux;
+      //--sbuf1[6] = ibackledbt; 
+      i2c_write(FIRSTI2CREG+5, sbuf1+5, 2);            
+      Timer0_Delay1ms(10);   
+      clr_I2CEN;           
+         
+#endif
+         
+         
+//--iputs0("tonekey in2\r\n");      
+         
+      }
+       
+   }  
+
+   
+   //key12 volboth
+   if  (flg_keycome12==1 )
+   {
+      flg_keycome12=0;
+
+      if (ikeyvalue12 ==1)      //short 
+      {         
+         ikeynum12=0; ikeyvalue12=0;         
+         
+         ;  //nothing       
+      }
+      
+      //restore factory settings
+      if (ikeyvalue12 ==2)   //long
+      {
+         ikeynum12=0; ikeyvalue12=0;         
+
+         flg_reset =1; 
+         
+         
+         //power off
+         if(flg_voicemode ==0)  //0 -- BT, 1 -- AUX
+         {
+            
+            //send reset cmd 
+            iputbytes0(sreset,5); 
+            Timer0_Delay1ms(1000); 
+            
+            //poweroff_BT();
+            flg_poweroffBT =1;
+            
+         }
+         else
+         {
+            
+            //back led 
+            BACK_LED_PIN=0;     
+            
+            //pairing led
+            PAIRING_LED_PIN=0;
+            
+            //charge led
+            CHARGE_LED_PIN=0;  
+            
+            poweroff_AUXReset_sound(); 
+            
+         }
+         
+      }      
+       
+   }   
+
+   
+   if (ikeyvalue4==1)
+   {
+      ikeyvalue4=0;      
+
+      
+#if ( (defined SNOOZBUTTON) || (defined SNOOZBUTTONBT)  )   
+     
+      flg_pairing =1;
+      
+      if(flg_timestop==0)   
+      {         
+         flg_timestop =1;
+         iputbytes0(sswitchvoice,5);   //open poweroff timer
+      }         
+      else
+      {
+         flg_timestop =0;
+         iputbytes0(slowbattsound,5);  //close poweroff timer  
+      }
+      
+      Timer0_Delay1ms(280); 
+         
+#endif      
+         
+
+//iputs0("key4 in\r\n");         
+      
+   }      
+   
+}
+
+
+
+======================================================================
+
+
+
+main()
+{
+
+  ......
+
+  while (1)
+  {  
+         getadcvalue();   
+         adckey_scan();       
+         adckey_check();     
+         adckey_process( );   
+  
+  }    
+
+}
+
+
+
+
