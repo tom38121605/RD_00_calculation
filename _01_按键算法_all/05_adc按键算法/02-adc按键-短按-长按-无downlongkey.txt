@@ -46,8 +46,60 @@ UINT16 iadcvalue2_avr=0;
 
 UINT16 iadcvalue2B=0;   //BATT value
 
+//key 
 
----
+UINT8   KEY0_NC_NULL  =0; 
+
+//UINT32 LONGKEYCOUNT2 = 150;    //fixed 3.0s+ 
+
+//UINT32 LONGKEYCOUNT2 = 90;    
+UINT32 LONGKEYCOUNT2 = 180;    
+
+
+UINT8 flg_keydown1 =0;
+UINT8 flg_keydown2 =0;
+UINT8 flg_keydown3 =0;
+UINT8 flg_keydown4 =0;
+UINT8 flg_keydown12 =0;
+UINT8 flg_keydown20 =0;
+
+
+UINT8 ikeyvalue1 =0;
+UINT8 ikeyvalue2 =0;
+UINT8 ikeyvalue3 =0;
+UINT8 ikeyvalue4 =0;
+UINT8 ikeyvalue12 =0;
+
+UINT32 ikeynum1 =0;
+UINT32 ikeynum2 =0;
+UINT32 ikeynum3 =0;
+UINT32 ikeynum4 =0;
+UINT32 ikeynum12 =0;
+
+UINT8 flg_keycome1 =0;
+UINT8 flg_keycome2 =0;
+UINT8 flg_keycome3 =0;
+UINT8 flg_keycome4 =0;
+UINT8 flg_keycome12 =0;
+
+ 
+UINT8 flg_keydown10 =0;
+UINT8 ikeyvalue10 =0;
+UINT8 flg_power =0;
+UINT8 flg_power2 =0;
+
+UINT32 ikeynum10=0;
+UINT8 flg_keycome10 =0;
+
+UINT8 ikeytouch1 =0;
+UINT8 ikeytouch2 =0;
+UINT8 ikeytouch4 =0;
+
+
+
+UINT8 flg_keydown11 =0;
+UINT8 flg_poweron =0;
+
 
 //---------V1.4-----------
 
